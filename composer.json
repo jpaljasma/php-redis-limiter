@@ -1,0 +1,20 @@
+{
+  "name": "jpaljasma/php-redis-limiter",
+  "description": "Simple rate limiter for PHP/Redis",
+  "keywords": ["php", "redis", "rate", "ratelimiter", "limiter"],
+  "authors": [
+    {
+      "name": "Jaan Paljasma",
+      "homepage": "https://jpaljasma.blogspot.com/"
+    }
+  ],
+  "require": {
+    "php": ">=5.5",
+    "php-di/php-di": "^5.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "RedisRateLimiter\\": "src/RedisRateLimiter/"
+    }
+  }
+}
