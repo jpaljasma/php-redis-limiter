@@ -4,6 +4,10 @@ namespace RedisRateLimiter;
 
 use Redis;
 
+/**
+ * Class Limiter
+ * @package RedisRateLimiter
+ */
 class Limiter
 {
 
@@ -46,7 +50,7 @@ class Limiter
      * LUA script
      * @return string
      */
-    private function _lua()
+    private function getRedisLuaScript()
     {
         $lua = <<<EOT
 local key = KEYS[1]
@@ -66,9 +70,9 @@ EOT;
      * SHA1 hash of the LUA script
      * @return string
      */
-    private function _luaSha()
+    private function getRedisLuaSHA()
     {
-        return sha1($this->_lua());
+        return sha1($this->getRedisLuaScript());
     }
 
     /**
@@ -78,15 +82,14 @@ EOT;
      * @param int $window time in seconds
      * @return array
      */
-    private function runLua($key, $window)
+    private function runRedisLuaScript($key, $window)
     {
-        echo __METHOD__.PHP_EOL;
-        $luaSha = $this->_luaSha();
+        $luaSha = $this->getRedisLuaSHA();
         $response = $this->redis->script('EXISTS', $luaSha);
 
         if (0 === $response[0]) {
             // load LUA script into redis registry
-            $this->redis->script('LOAD', $this->_lua());
+            $this->redis->script('LOAD', $this->getRedisLuaScript());
         }
 
         return $this->redis->evalSha($luaSha, [$key, $window], 1);
@@ -101,7 +104,6 @@ EOT;
      */
     private function runRedis($key, $window)
     {
-        echo __METHOD__.PHP_EOL;
         $tmpKey = 'tmp:' . $key;
         return $this->redis->multi()
             ->setex($tmpKey, $window, 0)
@@ -112,36 +114,54 @@ EOT;
     }
 
     /**
+     * Resets the counter
+     * @param string $key
+     */
+    public function reset($key) {
+        $runKey = $this->keyPrefix . $key;
+        $this->redis->delete($runKey);
+    }
+
+    /**
      * @param string $key Redis key
      * @param int $limit How many times the key can be accessed within TTL ms
      * @param int $window TTL in seconds
      * @return array
      * @throws \Exception
      */
-    public function limit($key, $limit, $window)
+    public function hit($key, $limit, $window)
     {
 
-        $runMethod = $this->useLua ? 'runLua' : 'runRedis';
+        $runMethod = $this->useLua ? 'runRedisLuaScript' : 'runRedis';
 
-        $runKey = $this->keyPrefix.$key;
-        $response = $this->$runMethod($runKey, $window);
+        $runKey = $this->keyPrefix . $key;
+        try {
+            $response = $this->$runMethod($runKey, $window);
+        } catch (\Exception $ex) {
+            $response = null;
+        }
 
         if ($response) {
+
             $currentCounter = (int)$response[2];
             $currentTTLms = (int)$response[3];
+
             if ($currentTTLms < 0) {
                 $this->redis->expire($runKey, $window);
                 $currentTTLms = 0;
             }
 
             $overLimit = ($currentCounter > $limit);
+
             return [
                 'current' => $currentCounter,
-                'wait' => $overLimit ? max(0, $currentTTLms) : 0,
-                'over' => $overLimit,
+                'remaining' => max(0, $limit - $currentCounter),
+                'overlimit' => $overLimit,
+                'waitms' => $overLimit ? max(0, $currentTTLms) : 0,
             ];
+
         } else {
-            throw new \Exception('Could not set the limit');
+            throw new \Exception('Could not set rate limit hit, no response');
         }
     }
 }
