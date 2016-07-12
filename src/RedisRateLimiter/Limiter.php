@@ -117,7 +117,8 @@ EOT;
      * Resets the counter
      * @param string $key
      */
-    public function reset($key) {
+    public function reset($key)
+    {
         $runKey = $this->keyPrefix . $key;
         $this->redis->delete($runKey);
     }

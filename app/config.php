@@ -11,7 +11,6 @@ return [
     Redis::class => function (ContainerInterface $c) {
         $redis = new Redis();
         $redis->connect($c->get('redis.host'), $c->get('redis.port'), 500);
-        echo 'Redis connected';
         return $redis;
     },
     Limiter::class => DI\object(Limiter::class)
