@@ -33,7 +33,7 @@ will output something like this:
 ```
 array (size=4)
   'current' => int 1
-  'remaining' => int 5
+  'remaining' => int 4
   'overlimit' => boolean false
   'waitms' => int 30000
 ```
@@ -43,7 +43,7 @@ After you hit the limit, the `remaining` property will read 0, and `overlimit` w
 ```php
 usleep($response['waitms'])`;
 ```
-After trying again.
+followed by another hit() call.
 
 ### Performance
 Reasonable performance (measured with Redis running on localhost)
