@@ -15,6 +15,7 @@ return [
     },
     Limiter::class => DI\object(Limiter::class)
         ->constructorParameter('keyPrefix', DI\get('limiter.keyprefix'))
-        ->constructorParameter('useLua', true)
+        ->constructorParameter('useLua', false)
+        ->method('setStrategy', 'rolling')
         ->scope(Scope::PROTOTYPE),
 ];
